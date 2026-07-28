@@ -1,0 +1,6 @@
+{
+  "name": "कथा चौतारी",
+  "description": "नेपाली कथा, लोककथा, प्रेरणादायी कथा र जीवनका रोचक कथाहरूको डिजिटल चौतारी।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

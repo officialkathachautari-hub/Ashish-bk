@@ -1,0 +1,67 @@
+import React from 'react';
+import { BookOpen, Sparkles, Heart, Users, ShieldCheck } from 'lucide-react';
+
+export const AboutSection: React.FC = () => {
+  return (
+    <section id="about" className="px-5 py-24 relative overflow-hidden">
+      <div className="max-w-5xl mx-auto space-y-12">
+        
+        {/* MAIN ABOUT CARD */}
+        <div className="glass rounded-3xl p-8 md:p-12 border border-white/10 relative shadow-2xl text-center space-y-6">
+          <div className="inline-flex p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-3xl">
+            🌿
+          </div>
+
+          <h2 className="text-3xl md:text-5xl font-black hero-title">
+            हाम्रो बारेमा | कथा चौतारी
+          </h2>
+
+          <p className="text-gray-300 muted leading-relaxed max-w-3xl mx-auto text-sm md:text-base">
+            "कथा चौतारी" नेपाली लोककथा, पौराणिक गाथा, जीवनका यथार्थ भोगाइहरू र मौलिक नेपाली साहित्यलाई आधुनिक डिजिटल माध्यममार्फत नयाँ पुस्तासम्म पुर्याउने एउटा पवित्र चौतारी हो। हामी शब्द, दृश्य र ३D कलामार्फत नेपाली कथा संस्कृतिलाई जीवित राख्न प्रतिबद्ध छौँ।
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-left">
+            <div className="p-5 rounded-2xl bg-black/20 border border-white/5 space-y-2">
+              <div className="text-amber-400 font-bold flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                <span>मौलिकता</span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                नेपाली गाउँघर, हिमाल, पहाड र तराईका मौलिक कथा तथा संस्कृतिको संरक्षण।
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-black/20 border border-white/5 space-y-2">
+              <div className="text-rose-400 font-bold flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                <span>आधुनिक प्रविधि</span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                ३D अन्तरक्रियात्मक पुस्तक, अडियो नरेसन र AI कथाकार प्रविधिको सम्मिश्रण।
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-black/20 border border-white/5 space-y-2">
+              <div className="text-emerald-400 font-bold flex items-center gap-2">
+                <Heart className="w-5 h-5" />
+                <span>संस्कार र शिक्षा</span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                बालबालिका र युवाहरूका लागि नैतिक शिक्षा र सकारात्मक जीवन दर्शनको प्रवर्द्धन।
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <footer className="border-t border-white/10 pt-8 text-center text-xs text-gray-400 space-y-2">
+          <p className="font-medium text-gray-300">© २०२६ कथा चौतारी। सर्वाधिकार सुरक्षित।</p>
+          <p className="text-[11px] opacity-70">
+            नेपाली भाषा, कला र साहित्यको डिजिटल प्रवर्द्धन।
+          </p>
+        </footer>
+
+      </div>
+    </section>
+  );
+};
