@@ -274,13 +274,25 @@ export const Hero3DCanvas: React.FC = () => {
     bookGroup.rotation.y = -0.5;
     scene.add(bookGroup);
 
-    // Mouse Interaction
+    // Base initial rotation offset
+    let userDragRotationY = -0.5;
     let targetRotationX = 0.4;
     let targetRotationY = -0.5;
     let mouseX = 0;
     let mouseY = 0;
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
+
+    const calculateTargetRotation = () => {
+      const currentScrollY = window.scrollY;
+      // Every 400px of scrolling rotates the book 360 degrees (2 * Math.PI)
+      const scrollRotationY = (currentScrollY / 400) * (Math.PI * 2);
+
+      if (!isDragging) {
+        targetRotationY = userDragRotationY + scrollRotationY + mouseX * 0.4;
+        targetRotationX = 0.4 - mouseY * 0.3 + Math.sin(currentScrollY * 0.003) * 0.2;
+      }
+    };
 
     const onMouseDown = (e: MouseEvent) => {
       isDragging = true;
@@ -292,7 +304,7 @@ export const Hero3DCanvas: React.FC = () => {
         const deltaX = e.clientX - previousMousePosition.x;
         const deltaY = e.clientY - previousMousePosition.y;
 
-        targetRotationY += deltaX * 0.01;
+        userDragRotationY += deltaX * 0.01;
         targetRotationX += deltaY * 0.01;
 
         previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -300,9 +312,7 @@ export const Hero3DCanvas: React.FC = () => {
         const rect = container.getBoundingClientRect();
         mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-        targetRotationY = -0.5 + mouseX * 0.4;
-        targetRotationX = 0.4 - mouseY * 0.3;
+        calculateTargetRotation();
       }
     };
 
@@ -310,18 +320,9 @@ export const Hero3DCanvas: React.FC = () => {
       isDragging = false;
     };
 
-    // Scroll Interaction (Spin book on page scroll)
-    let lastScrollY = window.scrollY;
+    // Scroll Interaction (Full 360° rotation based on scroll position)
     const onScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollY;
-      lastScrollY = currentScrollY;
-
-      // Spin book smoothly on Y axis based on scroll velocity
-      targetRotationY += scrollDelta * 0.012;
-      
-      // Dynamic tilt based on scroll position
-      targetRotationX = 0.4 + Math.sin(currentScrollY * 0.004) * 0.25;
+      calculateTargetRotation();
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -381,14 +382,17 @@ export const Hero3DCanvas: React.FC = () => {
       // Gentle floating motion (positioned higher in center)
       bookGroup.position.y = 0.22 + Math.sin(elapsedTime * 1.5) * 0.08;
 
-      // Smooth rotation interpolation
-      bookGroup.rotation.y += (targetRotationY - bookGroup.rotation.y) * 0.05;
-      bookGroup.rotation.x += (targetRotationX - bookGroup.rotation.x) * 0.05;
+      // Calculate target rotation from scroll & drag
+      calculateTargetRotation();
 
-      // Slow auto rotation if idle
+      // Slow idle spin added to base offset
       if (!isDragging) {
-        targetRotationY += 0.003;
+        userDragRotationY += 0.0015;
       }
+
+      // Smooth rotation interpolation
+      bookGroup.rotation.y += (targetRotationY - bookGroup.rotation.y) * 0.08;
+      bookGroup.rotation.x += (targetRotationX - bookGroup.rotation.x) * 0.08;
 
       // Rotate particles
       particles.rotation.y = elapsedTime * 0.05;

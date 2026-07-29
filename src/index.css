@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* SLEEK CUSTOM SCROLLBAR */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 26, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.35);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.7);
+}
+
 @layer base {
   body {
     margin: 0;
@@ -108,9 +135,59 @@
   animation: floating 4s ease-in-out infinite;
 }
 
+.animate-float {
+  animation: floating 3.5s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatingSlow 6s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: floatingFast 2.2s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatingReverse 4.5s ease-in-out infinite;
+}
+
+.animate-float-rotate {
+  animation: floatRotate 5s ease-in-out infinite;
+}
+
 @keyframes floating {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes floatingSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(1.5deg); }
+}
+
+@keyframes floatingFast {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes floatingReverse {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(12px); }
+}
+
+@keyframes floatRotate {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(6deg); }
+}
+
+.floating-glow {
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
+  animation: floatGlow 4s ease-in-out infinite;
+}
+
+@keyframes floatGlow {
+  0%, 100% { transform: translateY(0px); box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2); }
+  50% { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(245, 158, 11, 0.45); }
 }
 
 @keyframes spinSlow {

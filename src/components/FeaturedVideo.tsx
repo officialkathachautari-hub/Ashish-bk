@@ -45,7 +45,7 @@ export const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
         
         {/* SECTION TITLE */}
         <div className="text-center mb-8">
-          <span className="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold tracking-wide">
+          <span className="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold tracking-wide animate-float-slow">
             🎬 मुख्य प्रस्तुति भिडियो कथा
           </span>
           <h2 className="text-3xl md:text-5xl font-black mt-3 hero-title">

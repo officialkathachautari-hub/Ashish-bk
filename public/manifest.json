@@ -1,0 +1,24 @@
+{
+  "name": "कथा चौतारी | नेपाली डिजिटल साहित्य मञ्च",
+  "short_name": "कथा चौतारी",
+  "description": "नेपाली भाषाका मौलिक कथा, अडियो साहित्य, लोककथा र बाल साहित्यको डिजिटल संग्रह।",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=192&h=192&fit=crop",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=512&h=512&fit=crop",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

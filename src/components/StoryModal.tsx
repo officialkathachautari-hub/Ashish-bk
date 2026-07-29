@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Story, Comment, ReaderSettings } from '../types';
-import { X, Heart, Volume2, VolumeX, Share2, Sparkles, Send, Star, BookOpen, Type, Palette, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Story, Comment, ReaderSettings, StoryReactions } from '../types';
+import { X, Heart, Share2, Sparkles, Send, Star, BookOpen, Type, Palette, Check, UserCheck, MessageSquare, ExternalLink, Zap, Play, Pause, FastForward, Download, WifiOff, Volume2, Radio } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { BackgroundMusicPlayer } from './BackgroundMusicPlayer';
 
 interface StoryModalProps {
   story: Story | null;
@@ -12,6 +13,9 @@ interface StoryModalProps {
   onAddComment: (storyId: string, comment: Comment) => void;
   onContinueWithAI: (story: Story) => void;
   onAnalyzeMoralWithAI: (story: Story) => void;
+  isFollowingAuthor?: boolean;
+  onToggleFollowAuthor?: (authorName: string) => void;
+  onOpenDonateModal?: (authorName: string) => void;
 }
 
 export const StoryModal: React.FC<StoryModalProps> = ({
@@ -23,8 +27,10 @@ export const StoryModal: React.FC<StoryModalProps> = ({
   onAddComment,
   onContinueWithAI,
   onAnalyzeMoralWithAI,
+  isFollowingAuthor = false,
+  onToggleFollowAuthor,
+  onOpenDonateModal,
 }) => {
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [readerSettings, setReaderSettings] = useState<ReaderSettings>({
     fontSize: 'md',
     theme: 'dark',
@@ -37,40 +43,162 @@ export const StoryModal: React.FC<StoryModalProps> = ({
   const [newCommentRating, setNewCommentRating] = useState(5);
   const [copiedToast, setCopiedToast] = useState(false);
 
+  // Ask AI State
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [isAskingAI, setIsAskingAI] = useState(false);
+
+  // Fast Scroll Reader State
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState<number>(2); // 1: slow, 2: medium, 3: fast
+  const modalContainerRef = useRef<HTMLDivElement>(null);
+
+  // Offline Download & Audio Narration State
+  const [isDownloadedOffline, setIsDownloadedOffline] = useState(false);
+  const [isPlayingNarration, setIsPlayingNarration] = useState(false);
+  const [speechRate, setSpeechRate] = useState<number>(1);
+
+  // Multi-Emoji Reactions State
+  const [localReactions, setLocalReactions] = useState<StoryReactions>({
+    love: 12,
+    clap: 8,
+    fire: 15,
+    wow: 5,
+    sad: 3,
+    thanks: 10,
+  });
+
   useEffect(() => {
-    // Reset audio on modal change
+    if (!story) return;
+    if (story.reactions) {
+      setLocalReactions(story.reactions);
+    } else {
+      setLocalReactions({ love: 12, clap: 8, fire: 15, wow: 5, sad: 3, thanks: 10 });
+    }
+  }, [story]);
+
+  const handleReaction = (key: keyof StoryReactions) => {
+    setLocalReactions((prev) => ({
+      ...prev,
+      [key]: prev[key] + 1,
+    }));
+    confetti({
+      particleCount: 35,
+      spread: 50,
+      origin: { y: 0.8 },
+    });
+  };
+
+  useEffect(() => {
+    if (!story) return;
+    const existing = localStorage.getItem('katha_offline_stories');
+    if (existing) {
+      try {
+        const list: Story[] = JSON.parse(existing);
+        setIsDownloadedOffline(list.some((s) => s.id === story.id));
+      } catch (e) {}
+    } else {
+      setIsDownloadedOffline(false);
+    }
+  }, [story]);
+
+  const handleToggleOfflineDownload = () => {
+    if (!story) return;
+    const existing = localStorage.getItem('katha_offline_stories');
+    let list: Story[] = [];
+    if (existing) {
+      try { list = JSON.parse(existing); } catch (e) {}
+    }
+
+    if (isDownloadedOffline) {
+      list = list.filter((s) => s.id !== story.id);
+      setIsDownloadedOffline(false);
+    } else {
+      list.push(story);
+      setIsDownloadedOffline(true);
+    }
+    localStorage.setItem('katha_offline_stories', JSON.stringify(list));
+  };
+
+  const handleToggleNarration = () => {
+    if (!('speechSynthesis' in window) || !story) return;
+
+    if (isPlayingNarration) {
+      window.speechSynthesis.cancel();
+      setIsPlayingNarration(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(`${story.title}। ${story.fullContent}`);
+    utterance.rate = speechRate;
+    utterance.lang = 'ne-NP';
+
+    utterance.onend = () => {
+      setIsPlayingNarration(false);
+    };
+
+    utterance.onerror = () => {
+      setIsPlayingNarration(false);
+    };
+
+    // MediaSession API Background Controls
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: story.title,
+        artist: `वाचन: ${story.author}`,
+        album: 'कथा चौतारी - अडियो साहित्य',
+        artwork: [
+          { src: story.coverImage, sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      try {
+        navigator.mediaSession.setActionHandler('play', () => {
+          window.speechSynthesis.resume();
+          setIsPlayingNarration(true);
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          window.speechSynthesis.pause();
+          setIsPlayingNarration(false);
+        });
+      } catch (e) {}
+    }
+
+    window.speechSynthesis.speak(utterance);
+    setIsPlayingNarration(true);
+  };
+
+  useEffect(() => {
     return () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
-      setIsPlayingAudio(false);
     };
   }, [story]);
 
+  // Fast Scroll Auto Reader Effect
+  useEffect(() => {
+    if (!isAutoScrolling || !modalContainerRef.current) return;
+
+    const speeds: Record<number, number> = { 1: 1, 2: 2.5, 3: 5 };
+    const step = speeds[scrollSpeed] || 2.5;
+
+    const interval = setInterval(() => {
+      if (modalContainerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = modalContainerRef.current;
+        if (scrollTop + clientHeight >= scrollHeight - 5) {
+          setIsAutoScrolling(false); // Stop at bottom
+        } else {
+          modalContainerRef.current.scrollTop += step;
+        }
+      }
+    }, 40);
+
+    return () => clearInterval(interval);
+  }, [isAutoScrolling, scrollSpeed]);
+
   if (!isOpen || !story) return null;
-
-  // Toggle Speech Synthesis
-  const handleToggleAudio = () => {
-    if (!('speechSynthesis' in window)) {
-      alert('तपाईंको ब्राउजरमा भ्वाइस नरेसन उपलब्ध छैन।');
-      return;
-    }
-
-    if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-    } else {
-      window.speechSynthesis.cancel();
-      const textToRead = `${story.title}। ${story.fullContent}`;
-      const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.lang = 'ne-NP';
-      utterance.rate = 0.88;
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
-      setIsPlayingAudio(true);
-    }
-  };
 
   // Submit Comment
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -90,11 +218,44 @@ export const StoryModal: React.FC<StoryModalProps> = ({
     setNewCommentName('');
   };
 
+  // Ask AI handler
+  const handleAskAI = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiQuestion.trim()) return;
+
+    setIsAskingAI(true);
+    setAiAnswer(null);
+
+    setTimeout(() => {
+      let mockReply = '';
+      const q = aiQuestion.toLowerCase();
+      if (q.includes('चरित्र') || q.includes('पात्र')) {
+        mockReply = `यो कथामा मुख्य पात्रको भूमिका र उनीहरूको निर्णयले कथाको मुख्य मोड सिर्जना गर्दछ। उनीहरूले देखाएको धैर्य र चलाखी प्रशंसनीय छ।`;
+      } else if (q.includes('शिक्षा') || q.includes('सन्देश')) {
+        mockReply = `कथाले मुख्य रूपमा जीवनमा सत्य, ईमानदारी र धैर्यताको महत्त्वबारे गहिरो सन्देश दिन्छ।`;
+      } else {
+        mockReply = `यो कथा '${story.title}' नेपाली मौलिक परिवेशमा आधारित छ। यसले पाठकलाई ${story.category} विधाको सुन्दर र जीवन्त अनुभूति प्रदान गर्दछ।`;
+      }
+      setAiAnswer(mockReply);
+      setIsAskingAI(false);
+    }, 1200);
+  };
+
   // Share story with URL / deep link
-  const handleShare = async () => {
+  const handleShare = async (platform?: 'fb' | 'wa') => {
     const url = new URL(window.location.href);
     url.searchParams.set('story', story.id);
     const shareUrl = url.toString();
+
+    if (platform === 'wa') {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`कथा चौतारी - ${story.title}\n${shareUrl}`)}`, '_blank');
+      return;
+    }
+
+    if (platform === 'fb') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+      return;
+    }
 
     if (navigator.share) {
       try {
@@ -106,9 +267,7 @@ export const StoryModal: React.FC<StoryModalProps> = ({
         setCopiedToast(true);
         setTimeout(() => setCopiedToast(false), 2500);
         return;
-      } catch (e) {
-        // Fallback to clipboard if share cancelled or unavailable
-      }
+      } catch (e) {}
     }
 
     if (navigator.clipboard) {
@@ -116,9 +275,7 @@ export const StoryModal: React.FC<StoryModalProps> = ({
         await navigator.clipboard.writeText(shareUrl);
         setCopiedToast(true);
         setTimeout(() => setCopiedToast(false), 2500);
-      } catch (err) {
-        console.error('Failed to copy link', err);
-      }
+      } catch (err) {}
     }
   };
 
@@ -134,7 +291,6 @@ export const StoryModal: React.FC<StoryModalProps> = ({
     }
   };
 
-  // Reader Font Size Class
   const fontSizes = {
     sm: 'text-sm md:text-base leading-relaxed',
     md: 'text-base md:text-lg leading-relaxed',
@@ -142,7 +298,6 @@ export const StoryModal: React.FC<StoryModalProps> = ({
     xl: 'text-xl md:text-2xl leading-loose',
   };
 
-  // Reader Theme Styles
   const themeStyles = {
     dark: 'bg-[#0f172a] text-slate-100 border-slate-800',
     light: 'bg-[#fdfbf7] text-gray-900 border-amber-200/60',
@@ -154,6 +309,7 @@ export const StoryModal: React.FC<StoryModalProps> = ({
       
       {/* MODAL CONTAINER */}
       <div
+        ref={modalContainerRef}
         className={`max-w-3xl w-full rounded-3xl p-5 md:p-8 relative shadow-2xl transition-colors duration-300 border ${themeStyles[readerSettings.theme]} my-auto max-h-[90vh] overflow-y-auto`}
       >
         {/* CLOSE BUTTON */}
@@ -168,12 +324,55 @@ export const StoryModal: React.FC<StoryModalProps> = ({
         {/* HEADER CONTROLS */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-gray-500/20 pr-10">
           
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            {story.category}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              {story.category}
+            </span>
+            {story.isSponsored && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                💰 प्रायोजित ({story.sponsorName || 'Sponsor'})
+              </span>
+            )}
+          </div>
 
-          {/* READER PREFERENCES BAR */}
-          <div className="flex items-center gap-2 bg-black/10 p-1.5 rounded-full border border-gray-500/20">
+          {/* READER PREFERENCES & FAST AUTO-SCROLL BAR */}
+          <div className="flex flex-wrap items-center gap-2 bg-black/20 p-1.5 rounded-full border border-gray-500/20">
+            
+            {/* FAST SCROLL READER BUTTON */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30">
+              <button
+                onClick={() => setIsAutoScrolling(!isAutoScrolling)}
+                className={`p-1.5 rounded-full font-bold text-xs flex items-center gap-1 cursor-pointer transition-all ${
+                  isAutoScrolling
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'bg-white/10 text-amber-300 hover:bg-white/20'
+                }`}
+                title="अटो-स्क्रोल रिडर"
+              >
+                {isAutoScrolling ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Zap className="w-3.5 h-3.5 text-amber-400" />}
+                <span className="text-[11px] font-extrabold">{isAutoScrolling ? 'रोक्नुहोस्' : 'फास्ट स्क्रोल'}</span>
+              </button>
+
+              {/* Speed Buttons for Auto Scroll */}
+              {isAutoScrolling && (
+                <div className="flex items-center gap-1 border-l border-amber-500/30 pl-1.5 animate-fadeIn">
+                  {[1, 2, 3].map((sp) => (
+                    <button
+                      key={sp}
+                      onClick={() => setScrollSpeed(sp)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-black cursor-pointer ${
+                        scrollSpeed === sp
+                          ? 'bg-amber-400 text-black font-extrabold'
+                          : 'text-amber-200/80 hover:text-white'
+                      }`}
+                    >
+                      {sp}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Font Size Selector */}
             <div className="flex items-center gap-1 px-2 border-r border-gray-500/20">
               <Type className="w-3.5 h-3.5 opacity-60" />
@@ -227,30 +426,94 @@ export const StoryModal: React.FC<StoryModalProps> = ({
             alt={story.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-2">
             <div>
-              <p className="text-xs text-amber-300 font-semibold">लेखक: {story.author}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-amber-300 font-semibold">लेखक: {story.author}</p>
+                {onToggleFollowAuthor && (
+                  <button
+                    onClick={() => onToggleFollowAuthor(story.author)}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                      isFollowingAuthor
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500 text-black border-amber-400'
+                    }`}
+                  >
+                    {isFollowingAuthor ? '✓ Followed' : '+ Follow Author'}
+                  </button>
+                )}
+              </div>
               <h2 className="text-2xl md:text-4xl font-black text-white mt-1">{story.title}</h2>
             </div>
+
+            {/* DONATE TO AUTHOR BUTTON */}
+            {onOpenDonateModal && (
+              <button
+                onClick={() => onOpenDonateModal(story.author)}
+                className="px-3 py-1.5 rounded-full bg-rose-500/80 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1 shadow-lg cursor-pointer"
+              >
+                <Heart className="w-3.5 h-3.5 fill-current" />
+                <span>लेखकलाई सहयोग</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* TOP TOOLBAR (AUDIO, FAVORITE, SHARE) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 my-6 py-3 px-4 rounded-2xl bg-black/10 border border-gray-500/20">
-          <button
-            onClick={handleToggleAudio}
-            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
-              isPlayingAudio
-                ? 'bg-rose-500 text-white animate-pulse shadow-md'
-                : 'bg-amber-500 text-black hover:bg-amber-400'
-            }`}
-          >
-            {isPlayingAudio ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            <span>{isPlayingAudio ? 'अडियो नरेसन रोक्नुहोस्' : '🔊 कथा वाचन सुन्नुहोस्'}</span>
-          </button>
+        {/* ACTIONS BAR */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 mb-3 px-1">
+          <div className="text-xs text-amber-300 font-semibold flex items-center gap-2">
+            <span>📖 वाचन समय: {story.readTime}</span>
+            <span>• ⭐ {story.averageRating || 5.0} ({story.totalRatings || 1})</span>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* AUDIO NARRATION BUTTON */}
+            <button
+              onClick={handleToggleNarration}
+              className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                isPlayingNarration
+                  ? 'bg-rose-500 text-white border-rose-400 animate-pulse'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+              }`}
+              title="अडियो कथा सुन्नुहोस् (Background Playback Available)"
+            >
+              {isPlayingNarration ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
+              <span>{isPlayingNarration ? 'रोक्नुहोस्' : 'अडियो सुन्नुहोस्'}</span>
+            </button>
+
+            {/* OFFLINE DOWNLOAD BUTTON */}
+            <button
+              onClick={handleToggleOfflineDownload}
+              className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                isDownloadedOffline
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
+              }`}
+              title="इन्टरनेट बिना पढ्नका लागि डाउनलोड गर्नुहोस्"
+            >
+              {isDownloadedOffline ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5 text-sky-400" />}
+              <span>{isDownloadedOffline ? 'अफलाइन सेभ भयो' : 'अफलाइन डाउनलोड'}</span>
+            </button>
+
+            {/* WhatsApp Share */}
+            <button
+              onClick={() => handleShare('wa')}
+              className="p-2 rounded-full bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 cursor-pointer text-xs font-bold"
+              title="WhatsApp मा शेयर गर्नुहोस्"
+            >
+              💬 WA
+            </button>
+
+            {/* Facebook Share */}
+            <button
+              onClick={() => handleShare('fb')}
+              className="p-2 rounded-full bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 cursor-pointer text-xs font-bold"
+              title="Facebook मा शेयर गर्नुहोस्"
+            >
+              f FB
+            </button>
+
             <button
               onClick={handleFavoriteClick}
               className={`p-2.5 rounded-full border transition-all cursor-pointer ${
@@ -264,19 +527,18 @@ export const StoryModal: React.FC<StoryModalProps> = ({
             </button>
 
             <button
-              onClick={handleShare}
+              onClick={() => handleShare()}
               className="px-3.5 py-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer relative flex items-center gap-1.5 text-xs font-bold shadow-sm"
-              title="कथाको लिङ्क शेयर वा कपी गर्नुहोस्"
             >
               {copiedToast ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4 text-amber-400" />}
-              <span>{copiedToast ? 'कपी भयो!' : 'शेयर गर्नुहोस्'}</span>
-              {copiedToast && (
-                <span className="absolute -bottom-9 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[11px] px-3 py-1 rounded-full shadow-xl whitespace-nowrap border border-emerald-400/40 z-30 font-semibold animate-fadeIn">
-                  ✓ कथाको लिङ्क क्लिपबोर्डमा कपी भयो!
-                </span>
-              )}
+              <span>{copiedToast ? 'कपी भयो!' : 'लिङ्क कपी'}</span>
             </button>
           </div>
+        </div>
+
+        {/* SOFT BACKGROUND MUSIC PLAYER */}
+        <div className="mb-6">
+          <BackgroundMusicPlayer key={story.id} />
         </div>
 
         {/* FULL STORY TEXT */}
@@ -296,12 +558,45 @@ export const StoryModal: React.FC<StoryModalProps> = ({
           </div>
         )}
 
+        {/* ASK AI ABOUT STORY SECTION */}
+        <div className="mt-8 p-5 rounded-2xl bg-black/30 border border-amber-500/30 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-bounce" />
+            <h4 className="text-xs font-extrabold text-amber-300 uppercase tracking-wider">
+              🤖 कथाबारे AI सँग प्रश्न सोध्नुहोस् (Ask AI)
+            </h4>
+          </div>
+
+          <form onSubmit={handleAskAI} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="उदा. यो कथाको मुख्य पात्रबारे भन्नुहोस्..."
+              value={aiQuestion}
+              onChange={(e) => setAiQuestion(e.target.value)}
+              className="flex-1 px-4 py-2 rounded-xl bg-black/50 border border-white/20 text-xs text-white outline-none focus:border-amber-400"
+            />
+            <button
+              type="submit"
+              disabled={isAskingAI}
+              className="px-4 py-2 rounded-xl bg-amber-500 text-black font-bold text-xs hover:bg-amber-400 transition-colors cursor-pointer"
+            >
+              {isAskingAI ? 'सोध्दै...' : 'सोध्नुहोस्'}
+            </button>
+          </form>
+
+          {aiAnswer && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed animate-fadeIn">
+              <span className="font-bold text-amber-300">🤖 AI उत्तर:</span> {aiAnswer}
+            </div>
+          )}
+        </div>
+
         {/* AI ACTIONS */}
-        <div className="mt-8 p-4 rounded-2xl bg-black/20 border border-gray-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="mt-6 p-4 rounded-2xl bg-black/20 border border-gray-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-center sm:text-left">
             <h5 className="text-xs font-bold text-amber-300 flex items-center gap-1 justify-center sm:justify-start">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>AI कथाकार सुविधा:</span>
+              <span>AI कथाकार विस्तार:</span>
             </h5>
             <p className="text-xs opacity-75">यो कथालाई AI मार्फत अगाडि बढाउनुहोस् वा विश्लेषण गर्नुहोस्।</p>
           </div>
@@ -319,6 +614,51 @@ export const StoryModal: React.FC<StoryModalProps> = ({
               className="flex-1 sm:flex-initial px-4 py-2 rounded-full border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-bold text-xs transition-colors cursor-pointer"
             >
               नैतिक विश्लेषण
+            </button>
+          </div>
+        </div>
+
+        {/* MULTI-EMOJI REACTIONS BAR */}
+        <div className="mt-8 p-4 rounded-2xl bg-black/40 border border-amber-500/30 space-y-2">
+          <h4 className="text-xs font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>✨</span> कथामा प्रतिक्रिया दिनुहोस् (Reactions)
+          </h4>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              onClick={() => handleReaction('love')}
+              className="px-3 py-1.5 rounded-full bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-xs font-bold text-rose-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>💖</span> <span>प्रेम ({localReactions.love})</span>
+            </button>
+            <button
+              onClick={() => handleReaction('clap')}
+              className="px-3 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-xs font-bold text-amber-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>👏</span> <span>ताली ({localReactions.clap})</span>
+            </button>
+            <button
+              onClick={() => handleReaction('fire')}
+              className="px-3 py-1.5 rounded-full bg-orange-500/20 hover:bg-orange-500/40 border border-orange-500/40 text-xs font-bold text-orange-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>🔥</span> <span>उत्कृष्ट ({localReactions.fire})</span>
+            </button>
+            <button
+              onClick={() => handleReaction('wow')}
+              className="px-3 py-1.5 rounded-full bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/40 text-xs font-bold text-blue-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>😮</span> <span>अचम्म ({localReactions.wow})</span>
+            </button>
+            <button
+              onClick={() => handleReaction('sad')}
+              className="px-3 py-1.5 rounded-full bg-purple-500/20 hover:bg-purple-500/40 border border-purple-500/40 text-xs font-bold text-purple-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>😢</span> <span>भावुक ({localReactions.sad})</span>
+            </button>
+            <button
+              onClick={() => handleReaction('thanks')}
+              className="px-3 py-1.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/40 text-xs font-bold text-emerald-200 flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-sm"
+            >
+              <span>🙏</span> <span>धन्यवाद ({localReactions.thanks})</span>
             </button>
           </div>
         </div>

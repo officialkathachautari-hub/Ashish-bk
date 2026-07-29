@@ -1,7 +1,12 @@
 import React from 'react';
-import { BookOpen, Sparkles, Heart, Users, ShieldCheck } from 'lucide-react';
+import { BookOpen, Sparkles, Heart } from 'lucide-react';
 
-export const AboutSection: React.FC = () => {
+interface AboutSectionProps {
+  onOpenDonate?: () => void;
+}
+
+export const AboutSection: React.FC<AboutSectionProps> = ({ onOpenDonate }) => {
+
   return (
     <section id="about" className="px-5 py-24 relative overflow-hidden">
       <div className="max-w-5xl mx-auto space-y-12">
@@ -50,6 +55,37 @@ export const AboutSection: React.FC = () => {
                 बालबालिका र युवाहरूका लागि नैतिक शिक्षा र सकारात्मक जीवन दर्शनको प्रवर्द्धन।
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* DONATION BANNER */}
+        <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-rose-950/80 via-slate-900 to-amber-950/80 border border-rose-500/40 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+          <div className="flex items-center gap-4 text-left">
+            <div className="w-14 h-14 rounded-2xl bg-rose-600/30 text-rose-300 border border-rose-500/40 flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+              💖
+            </div>
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2">
+                <span className="text-xs font-black text-rose-300 uppercase tracking-wider">Donation Support</span>
+                <span className="text-[10px] bg-amber-400 text-black px-2 py-0.5 rounded-full font-bold">नेपाली साहित्य प्रवर्द्धन</span>
+              </div>
+              <h3 className="text-lg md:text-xl font-black text-white">
+                कथा चौतारीलाई सहयोग गर्नुहोस्
+              </h3>
+              <p className="text-xs text-gray-300">
+                नेपाली भाषा र मौलिक साहित्यको जगेर्नाका लागि eSewa, FonePay वा बैंकमार्फत सहयोग पठाउन सक्नुहुन्छ।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={onOpenDonate}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 text-black font-black text-xs shadow-xl cursor-pointer hover:scale-105 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <Heart className="w-4 h-4 fill-current text-rose-950" />
+              <span>सहयोग पठाउनुहोस् (Donate)</span>
+            </button>
           </div>
         </div>
 

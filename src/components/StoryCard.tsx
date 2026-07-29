@@ -18,7 +18,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'सत्यकथा': 'bg-teal-500/20 text-teal-300 border-teal-500/30',
 };
 
-export const StoryCard: React.FC<StoryCardProps> = ({
+export const StoryCardComponent: React.FC<StoryCardProps> = ({
   story,
   isBookmarked,
   onToggleBookmark,
@@ -34,10 +34,15 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     >
       <div>
         {/* STORY COVER IMAGE */}
-        <div
-          className="story-image relative w-full h-48 bg-cover bg-center overflow-hidden"
-          style={{ backgroundImage: `url('${story.coverImage}')` }}
-        >
+        <div className="story-image relative w-full h-48 overflow-hidden bg-slate-900">
+          <img
+            src={story.coverImage}
+            alt={story.title}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
           {/* OVERLAY GRADIENT */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -106,3 +111,5 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     </article>
   );
 };
+
+export const StoryCard = React.memo(StoryCardComponent);

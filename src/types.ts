@@ -5,7 +5,9 @@ export type Category =
   | 'जीवनकथा'
   | 'रहस्य'
   | 'भावनात्मक'
-  | 'सत्यकथा';
+  | 'सत्यकथा'
+  | 'प्रेम'
+  | 'दुःख';
 
 export interface Comment {
   id: string;
@@ -13,6 +15,46 @@ export interface Comment {
   text: string;
   date: string;
   rating?: number;
+}
+
+export interface Badge {
+  id: string;
+  title: string;
+  emoji: string;
+  description: string;
+  earnedAt?: string;
+}
+
+export interface ReadingHistoryItem {
+  storyId: string;
+  storyTitle: string;
+  author: string;
+  category: string;
+  readAt: string;
+  progressPercent: number;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  isLoggedIn: boolean;
+  isPremium: boolean;
+  streakDays: number;
+  lastReadDate?: string;
+  badges: Badge[];
+  readingHistory: ReadingHistoryItem[];
+  followedAuthors: string[];
+}
+
+export interface StoryReactions {
+  love: number;
+  clap: number;
+  fire: number;
+  wow: number;
+  sad: number;
+  thanks: number;
 }
 
 export interface Story {
@@ -27,11 +69,43 @@ export interface Story {
   readTime: string;
   views: number;
   likes: number;
+  averageRating?: number;
+  totalRatings?: number;
   isFeatured?: boolean;
+  isSponsored?: boolean;
+  sponsorName?: string;
+  affiliateLink?: { text: string; url: string };
   videoUrl?: string;
   audioNarratorText?: string;
   date: string;
   comments?: Comment[];
+  reactions?: StoryReactions;
+  isUserPublished?: boolean;
+  contestId?: string;
+  contestVotes?: number;
+}
+
+export interface StoryContest {
+  id: string;
+  title: string;
+  theme: string;
+  description: string;
+  prize: string;
+  deadline: string;
+  bannerImage: string;
+  entriesCount: number;
+}
+
+export interface CommunityPost {
+  id: string;
+  author: string;
+  authorAvatar?: string;
+  title: string;
+  content: string;
+  likes: number;
+  date: string;
+  commentsCount: number;
+  category?: string;
 }
 
 export interface ReaderSettings {
@@ -40,4 +114,4 @@ export interface ReaderSettings {
   lineSpacing: 'normal' | 'relaxed' | 'loose';
 }
 
-export type AIStoryModalMode = 'create' | 'continue' | 'moral';
+export type AIStoryModalMode = 'create' | 'continue' | 'moral' | 'recommend' | 'ask';
